@@ -1,138 +1,245 @@
-import pygame
+mport pygame
 import random
 import sys
-import math
 
-def play_racer():
-    pygame.init()
-    win_w, win_h = 400, 600
-    win = pygame.display.set_mode((win_w, win_h))
-    pygame.display.set_caption("Racer Game")
-    racer_clock = pygame.time.Clock()
-    racer_font = pygame.font.SysFont("Arial", 20)
+# --- Car Game with Coins ---
 
-    clr_white = (255, 255, 255)
-    clr_black = (0, 0, 0)
-    clr_red = (200, 0, 0)
-    clr_yellow = (255, 255, 0)
-    clr_green = (0, 255, 0)
+pygame.init()
+WIN_W, WIN_H = 400, 600
+win = pygame.display.set_mode((WIN_W, WIN_H))
+pygame.display.set_caption("Car Coin Collector")
+fps = pygame.time.Clock()
 
-    car = pygame.Rect(175, 500, 50, 70)
-    car_vel = 5
-    foe = pygame.Rect(random.randint(0, 350), 0, 50, 70)
-    foe_vel = 3
+WHITE = (255, 255, 255)
+GRAY = (60, 60, 60)
+YELLOW = (255, 255, 0)
+BLUE = (0, 0, 255)
 
-    coin_list = []
-    coin_tick = 0
-    coin_delay = 30
-    coin_vals = [1, 2, 3]
-    coin_score = 0
+car_img = pygame.image.load("car.png")
+car_img = pygame.transform.scale(car_img, (50, 100))
+car_box = car_img.get_rect(center=(WIN_W // 2, WIN_H - 100))
 
-    running = True
-    while running:
-        win.fill(clr_black)
-        for evt in pygame.event.get():
-            if evt.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+coin_r = 15
+coins = []
+coin_delay = 30
+coin_tick = 0
+score = 0
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and car.left > 0:
-            car.x -= car_vel
-        if keys[pygame.K_RIGHT] and car.right < win_w:
-            car.x += car_vel
+car_move = 5
+road_move = 5
 
-        foe.y += foe_vel
-        if foe.y > win_h:
-            foe.x = random.randint(0, win_w - foe.width)
-            foe.y = 0
+font1 = pygame.font.SysFont(None, 36)
 
-        pygame.draw.rect(win, clr_green, car)
-        pygame.draw.rect(win, clr_red, foe)
+def draw_coin(x, y):
+    pygame.draw.circle(win, YELLOW, (x, y), coin_r)
 
-        coin_tick += 1
-        if coin_tick >= coin_delay:
-            coin_tick = 0
-            cx = random.randint(0, win_w - 20)
-            cy = 0
-            cval = random.choice(coin_vals)
-            coin_list.append({"rect": pygame.Rect(cx, cy, 20, 20), "val": cval})
+def draw_score(val):
+    txt = font1.render(f"Coins: {val}", True, BLUE)
+    win.blit(txt, (WIN_W - 130, 10))
 
-        for coin in coin_list[:]:
-            coin["rect"].y += 4
-            pygame.draw.circle(win, clr_yellow, coin["rect"].center, 10)
-            if car.colliderect(coin["rect"]):
-                coin_score += coin["val"]
-                coin_list.remove(coin)
-            elif coin["rect"].y > win_h:
-                coin_list.remove(coin)
+playing = True
+while playing:
+    fps.tick(60)
+    win.fill(GRAY)
 
-        if car.colliderect(foe):
-            running = False
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
-        score_txt = racer_font.render(f"Score: {coin_score}", True, clr_white)
-        win.blit(score_txt, (10, 10))
-        pygame.display.flip()
-        racer_clock.tick(60)
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT] and car_box.left > 0:
+        car_box.x -= car_move
+    if keys[pygame.K_RIGHT] and car_box.right < WIN_W:
+        car_box.x += car_move
 
-def play_snake():
-    pygame.init()
-    grid_w, grid_h = 600, 600
-    cell = 20
-    snake_win = pygame.display.set_mode((grid_w, grid_h))
-    pygame.display.set_caption("Snake Game")
-    snake_clock = pygame.time.Clock()
-    snake_font = pygame.font.SysFont("Arial", 20)
+    coin_tick += 1
+    if coin_tick >= coin_delay:
+        coin_tick = 0
+        cx = random.randint(coin_r, WIN_W - coin_r)
+        coins.append([cx, 0])
 
-    color_bg = (0, 0, 0)
-    color_snake = (0, 255, 0)
-    color_food = (255, 255, 0)
-    color_text = (255, 255, 255)
+    for c in coins[:]:
+        c[1] += road_move
+        draw_coin(c[0], c[1])
+        if car_box.collidepoint(c[0], c[1]):
+            coins.remove(c)
+            score += 1
+        elif c[1] > WIN_H:
+            coins.remove(c)
 
-    snake_body = [(100, 100)]
-    move_dir = (cell, 0)
-    food_list = []
-    food_vals = [1, 2, 3]
-    food_life = 50
-    snake_score = 0
+    win.blit(car_img, car_box)
+    draw_score(score)
+    pygame.display.update()
 
-    def add_food():
-        fx = random.randint(0, (grid_w - cell) // cell) * cell
-        fy = random.randint(0, (grid_h - cell) // cell) * cell
-        fval = random.choice(food_vals)
-        food_list.append({"pos": (fx, fy), "val": fval, "life": food_life})
+# --- Snake Game with Levels ---
 
-    add_food()
-    playing = True
-    while playing:
-        snake_win.fill(color_bg)
-        for evt in pygame.event.get():
-            if evt.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+pygame.init()
+CELL = 20
+S_W, S_H = 600, 400
+surf = pygame.display.set_mode((S_W, S_H))
+pygame.display.set_caption("Snake Levels")
+clk = pygame.time.Clock()
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP] and move_dir != (0, cell):
-            move_dir = (0, -cell)
-        if keys[pygame.K_DOWN] and move_dir != (0, -cell):
-            move_dir = (0, cell)
-        if keys[pygame.K_LEFT] and move_dir != (cell, 0):
-            move_dir = (-cell, 0)
-        if keys[pygame.K_RIGHT] and move_dir != (-cell, 0):
-            move_dir = (cell, 0)
+CLR1 = (255, 255, 255)
+CLR2 = (0, 255, 0)
+CLR3 = (255, 0, 0)
+CLR4 = (40, 40, 40)
 
-        hx, hy = snake_body[0]
-        new_head = (hx + move_dir[0], hy + move_dir[1])
-        snake_body.insert(0, new_head)
+font2 = pygame.font.SysFont(None, 35)
 
-        if not (0 <= new_head[0] < grid_w and 0 <= new_head[1] < grid_h):
-            break
-        if new_head in snake_body[1:]:
-            break
+snake_body = [(100, 100)]
+move_dir = (CELL, 0)
+food_pos = (0, 0)
+points = 0
+lvl = 1
+spd = 10
 
-        ate = False
-        for food in food_list[:]:
-            if new_head == food["pos"]:
-                snake_score += food["val"]
-                food_list.remove(food)
-                add_food()
+def draw_snake():
+    for s in snake_body:
+        pygame.draw.rect(surf, CLR2, (*s, CELL, CELL))
+
+def new_food():
+    while True:
+        x = random.randint(0, (S_W - CELL) // CELL) * CELL
+        y = random.randint(0, (S_H - CELL) // CELL) * CELL
+        if (x, y) not in snake_body:
+            return (x, y)
+
+def draw_info():
+    t = font2.render(f"Score: {points}  Level: {lvl}", True, CLR1)
+    surf.blit(t, (10, 10))
+
+food_pos = new_food()
+active = True
+while active:
+    clk.tick(spd)
+    surf.fill(CLR4)
+
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_UP] and move_dir != (0, CELL):
+        move_dir = (0, -CELL)
+    if keys[pygame.K_DOWN] and move_dir != (0, -CELL):
+        move_dir = (0, CELL)
+    if keys[pygame.K_LEFT] and move_dir != (CELL, 0):
+        move_dir = (-CELL, 0)
+    if keys[pygame.K_RIGHT] and move_dir != (-CELL, 0):
+        move_dir = (CELL, 0)
+
+    head = (snake_body[0][0] + move_dir[0], snake_body[0][1] + move_dir[1])
+    snake_body.insert(0, head)
+
+    if (head[0] < 0 or head[0] >= S_W or head[1] < 0 or head[1] >= S_H):
+        print("Wall hit!")
+        active = False
+
+    if head in snake_body[1:]:
+        print("Self hit!")
+        active = False
+
+    if head == food_pos:
+        points += 1
+        if points % 4 == 0:
+            lvl += 1
+            spd += 2
+        food_pos = new_food()
+    else:
+        snake_body.pop()
+
+    draw_snake()
+    pygame.draw.rect(surf, CLR3, (*food_pos, CELL, CELL))
+    draw_info()
+    pygame.display.update()
+
+# --- Simple Paint App ---
+
+pygame.init()
+P_W, P_H = 800, 600
+canvas = pygame.display.set_mode((P_W, P_H))
+pygame.display.set_caption("Simple Paint")
+paint_clk = pygame.time.Clock()
+
+CLR_WHITE = (255, 255, 255)
+CLR_BLACK = (0, 0, 0)
+palette = [CLR_BLACK, (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
+brush_color = CLR_BLACK
+
+drawing = False
+prev_pos = None
+mode = "draw"  # 'draw', 'rect', 'circle', 'erase'
+start = None
+brush_size = 10
+
+def draw_palette():
+    for i, c in enumerate(palette):
+        pygame.draw.rect(canvas, c, (10 + i*40, 10, 30, 30))
+    pygame.draw.rect(canvas, (200, 200, 200), (10, 50, 100, 30))
+    pygame.draw.rect(canvas, (200, 200, 200), (120, 50, 100, 30))
+    pygame.draw.rect(canvas, (200, 200, 200), (230, 50, 100, 30))
+    pygame.draw.rect(canvas, (200, 200, 200), (340, 50, 100, 30))
+    f = pygame.font.SysFont(None, 24)
+    canvas.blit(f.render("Draw", True, CLR_BLACK), (35, 55))
+    canvas.blit(f.render("Rect", True, CLR_BLACK), (145, 55))
+    canvas.blit(f.render("Circle", True, CLR_BLACK), (255, 55))
+    canvas.blit(f.render("Erase", True, CLR_BLACK), (360, 55))
+
+canvas.fill(CLR_WHITE)
+painting = True
+while painting:
+    paint_clk.tick(60)
+    draw_palette()
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            painting = False
+        elif e.type == pygame.MOUSEBUTTONDOWN:
+            x, y = e.pos
+            if y < 40:
+                idx = (x - 10) // 40
+                if 0 <= idx < len(palette):
+                    brush_color = palette[idx]
+                    mode = "draw"
+            elif 50 <= y <= 80:
+                if 10 <= x <= 110:
+                    mode = "draw"
+                elif 120 <= x <= 220:
+                    mode = "rect"
+                elif 230 <= x <= 330:
+                    mode = "circle"
+                elif 340 <= x <= 440:
+                    mode = "erase"
+            else:
+                drawing = True
+                start = e.pos
+                if mode == "draw":
+                    prev_pos = e.pos
+        elif e.type == pygame.MOUSEBUTTONUP:
+            if mode in ["rect", "circle"] and drawing:
+                end = e.pos
+                if mode == "rect":
+                    x1, y1 = start
+                    x2, y2 = end
+                    w = x2 - x1
+                    h = y2 - y1
+                    pygame.draw.rect(canvas, brush_color, (x1, y1, w, h), 2)
+                elif mode == "circle":
+                    x1, y1 = start
+                    x2, y2 = end
+                    r = int(((x2 - x1)**2 + (y2 - y1)**2)**0.5)
+                    pygame.draw.circle(canvas, brush_color, start, r, 2)
+            drawing = False
+            prev_pos = None
+        elif e.type == pygame.MOUSEMOTION and drawing:
+            if mode == "draw":
+                pygame.draw.line(canvas, brush_color, prev_pos, e.pos, brush_size)
+                prev_pos = e.pos
+            elif mode == "erase":
+                pygame.draw.circle(canvas, CLR_WHITE, e.pos, brush_size)
+    pygame.display.update()
+
+pygame.quit()
+sys.exit()
