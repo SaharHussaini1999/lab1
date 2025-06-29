@@ -1,0 +1,138 @@
+import pygame
+import random
+import sys
+import math
+
+def play_racer():
+    pygame.init()
+    win_w, win_h = 400, 600
+    win = pygame.display.set_mode((win_w, win_h))
+    pygame.display.set_caption("Racer Game")
+    racer_clock = pygame.time.Clock()
+    racer_font = pygame.font.SysFont("Arial", 20)
+
+    clr_white = (255, 255, 255)
+    clr_black = (0, 0, 0)
+    clr_red = (200, 0, 0)
+    clr_yellow = (255, 255, 0)
+    clr_green = (0, 255, 0)
+
+    car = pygame.Rect(175, 500, 50, 70)
+    car_vel = 5
+    foe = pygame.Rect(random.randint(0, 350), 0, 50, 70)
+    foe_vel = 3
+
+    coin_list = []
+    coin_tick = 0
+    coin_delay = 30
+    coin_vals = [1, 2, 3]
+    coin_score = 0
+
+    running = True
+    while running:
+        win.fill(clr_black)
+        for evt in pygame.event.get():
+            if evt.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] and car.left > 0:
+            car.x -= car_vel
+        if keys[pygame.K_RIGHT] and car.right < win_w:
+            car.x += car_vel
+
+        foe.y += foe_vel
+        if foe.y > win_h:
+            foe.x = random.randint(0, win_w - foe.width)
+            foe.y = 0
+
+        pygame.draw.rect(win, clr_green, car)
+        pygame.draw.rect(win, clr_red, foe)
+
+        coin_tick += 1
+        if coin_tick >= coin_delay:
+            coin_tick = 0
+            cx = random.randint(0, win_w - 20)
+            cy = 0
+            cval = random.choice(coin_vals)
+            coin_list.append({"rect": pygame.Rect(cx, cy, 20, 20), "val": cval})
+
+        for coin in coin_list[:]:
+            coin["rect"].y += 4
+            pygame.draw.circle(win, clr_yellow, coin["rect"].center, 10)
+            if car.colliderect(coin["rect"]):
+                coin_score += coin["val"]
+                coin_list.remove(coin)
+            elif coin["rect"].y > win_h:
+                coin_list.remove(coin)
+
+        if car.colliderect(foe):
+            running = False
+
+        score_txt = racer_font.render(f"Score: {coin_score}", True, clr_white)
+        win.blit(score_txt, (10, 10))
+        pygame.display.flip()
+        racer_clock.tick(60)
+
+def play_snake():
+    pygame.init()
+    grid_w, grid_h = 600, 600
+    cell = 20
+    snake_win = pygame.display.set_mode((grid_w, grid_h))
+    pygame.display.set_caption("Snake Game")
+    snake_clock = pygame.time.Clock()
+    snake_font = pygame.font.SysFont("Arial", 20)
+
+    color_bg = (0, 0, 0)
+    color_snake = (0, 255, 0)
+    color_food = (255, 255, 0)
+    color_text = (255, 255, 255)
+
+    snake_body = [(100, 100)]
+    move_dir = (cell, 0)
+    food_list = []
+    food_vals = [1, 2, 3]
+    food_life = 50
+    snake_score = 0
+
+    def add_food():
+        fx = random.randint(0, (grid_w - cell) // cell) * cell
+        fy = random.randint(0, (grid_h - cell) // cell) * cell
+        fval = random.choice(food_vals)
+        food_list.append({"pos": (fx, fy), "val": fval, "life": food_life})
+
+    add_food()
+    playing = True
+    while playing:
+        snake_win.fill(color_bg)
+        for evt in pygame.event.get():
+            if evt.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP] and move_dir != (0, cell):
+            move_dir = (0, -cell)
+        if keys[pygame.K_DOWN] and move_dir != (0, -cell):
+            move_dir = (0, cell)
+        if keys[pygame.K_LEFT] and move_dir != (cell, 0):
+            move_dir = (-cell, 0)
+        if keys[pygame.K_RIGHT] and move_dir != (-cell, 0):
+            move_dir = (cell, 0)
+
+        hx, hy = snake_body[0]
+        new_head = (hx + move_dir[0], hy + move_dir[1])
+        snake_body.insert(0, new_head)
+
+        if not (0 <= new_head[0] < grid_w and 0 <= new_head[1] < grid_h):
+            break
+        if new_head in snake_body[1:]:
+            break
+
+        ate = False
+        for food in food_list[:]:
+            if new_head == food["pos"]:
+                snake_score += food["val"]
+                food_list.remove(food)
+                add_food()
